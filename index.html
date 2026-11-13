@@ -1,0 +1,1197 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Crime Task Force Portal</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=IBM+Plex+Mono:wght@500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* Layout: Kopfzeile mit Abzeichen + Reiter, darunter ein Arbeitsbereich pro Reiter (Lagebild, Akten, Personen, Berichte, Vorschrift, Formulare) */
+:root{
+  --bg:#e9edf3; --surface:#ffffff; --surface-2:#f4f6fa; --ink:#131a2a; --muted:#566079; --line:#d3d9e4;
+  --navy:#1b2847; --accent:#a8720f; --accent-soft:#f5e8cc; --on-accent:#ffffff;
+  --t1:#2f8a55; --t2:#b88a12; --t3:#d06a22; --t4:#c23838;
+  --font-display:"Barlow Condensed","Arial Narrow",Arial,sans-serif;
+  --font-body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --font-mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+  --radius:8px;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0c111d; --surface:#141b2c; --surface-2:#1a2337; --ink:#e5e9f1; --muted:#909ab0; --line:#27314a;
+    --navy:#0a0f1b; --accent:#e2a73c; --accent-soft:#3a2f17; --on-accent:#17130a;
+    --t1:#4fb67c; --t2:#e0b43a; --t3:#ee8a45; --t4:#ef5f5f;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0c111d; --surface:#141b2c; --surface-2:#1a2337; --ink:#e5e9f1; --muted:#909ab0; --line:#27314a;
+  --navy:#0a0f1b; --accent:#e2a73c; --accent-soft:#3a2f17; --on-accent:#17130a;
+  --t1:#4fb67c; --t2:#e0b43a; --t3:#ee8a45; --t4:#ef5f5f;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font:15px/1.55 var(--font-body)}
+h1,h2,h3{font-family:var(--font-display);font-weight:700;letter-spacing:.02em;text-wrap:balance;margin:0}
+h2{font-size:30px;text-transform:uppercase}
+h3{font-size:20px;text-transform:uppercase}
+a{color:var(--accent)}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.mono{font-family:var(--font-mono);font-size:13px;font-variant-numeric:tabular-nums}
+.muted{color:var(--muted)}
+
+/* Kopfzeile */
+header.top{background:var(--navy);color:#eef1f7;border-bottom:3px solid var(--accent)}
+.top-inner{max-width:1200px;margin:0 auto;padding:14px 20px 0;display:flex;flex-direction:column;gap:12px}
+.brand{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.brand svg{flex:none}
+.brand-text{display:flex;flex-direction:column;line-height:1.15;min-width:0}
+.brand-text .dept{font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:#aab4c9}
+.brand-text h1{font-size:28px;text-transform:uppercase;color:#fff}
+.brand-right{margin-left:auto;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.sync{display:inline-flex;align-items:center;gap:7px;font-size:12px;color:#cfd6e4;background:rgba(255,255,255,.07);padding:5px 10px;border-radius:99px}
+.sync i{width:8px;height:8px;border-radius:50%;background:#8a93a6;display:block}
+.sync[data-state="live"] i{background:#4fb67c}
+.sync[data-state="warn"] i{background:#e0b43a}
+.sync[data-state="local"] i{background:#ef5f5f}
+nav.tabs{display:flex;gap:2px;overflow-x:auto;scrollbar-width:none}
+nav.tabs a{color:#c5cdde;text-decoration:none;padding:9px 14px 10px;font-family:var(--font-display);font-weight:600;font-size:17px;letter-spacing:.06em;text-transform:uppercase;border-radius:6px 6px 0 0;white-space:nowrap}
+nav.tabs a:hover{color:#fff;background:rgba(255,255,255,.06)}
+nav.tabs a[aria-current="page"]{background:var(--bg);color:var(--ink)}
+
+main{max-width:1200px;margin:0 auto;padding:24px 20px 60px}
+section.view{display:none;flex-direction:column;gap:20px}
+section.view.active{display:flex}
+.view-head{display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap}
+.view-head p{margin:4px 0 0;color:var(--muted);max-width:70ch}
+.view-head .actions{margin-left:auto;display:flex;gap:8px;flex-wrap:wrap}
+
+/* Bausteine */
+.btn{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--surface);padding:8px 14px;border-radius:6px;cursor:pointer;font-weight:500}
+.btn:hover{border-color:var(--accent)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--on-accent);font-weight:600}
+.btn.danger{color:var(--t4);border-color:color-mix(in srgb,var(--t4) 45%,var(--line))}
+.btn.ghost{background:transparent}
+.btn.sm{padding:5px 10px;font-size:13px}
+.btn[disabled]{opacity:.45;cursor:not-allowed}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:18px}
+.grid-tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
+.tile{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:14px 16px;display:flex;flex-direction:column;gap:2px}
+.tile b{font-family:var(--font-display);font-size:40px;line-height:1;font-variant-numeric:tabular-nums}
+.tile span{color:var(--muted);font-size:13px;text-transform:uppercase;letter-spacing:.08em}
+.two-col{display:grid;grid-template-columns:3fr 2fr;gap:16px}
+@media (max-width:860px){.two-col{grid-template-columns:1fr}}
+.toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.toolbar input,.toolbar select{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:8px 10px;min-width:0}
+.toolbar input[type="search"]{flex:1 1 220px}
+.pill{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;padding:2px 9px;border-radius:99px;border:1px solid var(--line);background:var(--surface-2);white-space:nowrap}
+.pill.t1{color:var(--t1);border-color:color-mix(in srgb,var(--t1) 40%,transparent)}
+.pill.t2{color:var(--t2);border-color:color-mix(in srgb,var(--t2) 40%,transparent)}
+.pill.t3{color:var(--t3);border-color:color-mix(in srgb,var(--t3) 40%,transparent)}
+.pill.t4{color:var(--t4);border-color:color-mix(in srgb,var(--t4) 45%,transparent);background:color-mix(in srgb,var(--t4) 10%,var(--surface))}
+.pill.acc{color:var(--accent);border-color:color-mix(in srgb,var(--accent) 40%,transparent)}
+.empty{padding:28px;text-align:center;color:var(--muted);border:1px dashed var(--line);border-radius:var(--radius)}
+
+/* Organisations-Akten */
+.org-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px}
+.org{position:relative;text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:16px 16px 14px 20px;cursor:pointer;display:flex;flex-direction:column;gap:8px;overflow:hidden}
+.org:hover{border-color:var(--accent)}
+.org::before{content:"";position:absolute;left:0;top:0;bottom:0;width:6px;background:var(--stripe,var(--line))}
+.org .row{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.org h3{font-size:22px}
+.org .meta{font-size:13px;color:var(--muted);display:grid;grid-template-columns:auto 1fr;gap:2px 10px}
+.org .meta dt{font-weight:600}
+.org .meta dd{margin:0;overflow-wrap:anywhere}
+
+.list{display:flex;flex-direction:column}
+.list-item{display:flex;gap:10px;align-items:center;padding:10px 4px;border-bottom:1px solid var(--line);cursor:pointer;background:none;border-left:0;border-right:0;border-top:0;text-align:left;width:100%}
+.list-item:last-child{border-bottom:0}
+.list-item:hover{background:var(--surface-2)}
+.list-item .grow{flex:1;min-width:0}
+.list-item .grow strong{display:block;overflow-wrap:anywhere}
+.list-item .grow small{color:var(--muted)}
+.dot{width:10px;height:10px;border-radius:50%;flex:none;background:var(--c,var(--line))}
+
+.table-wrap{overflow-x:auto;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius)}
+table{border-collapse:collapse;width:100%;min-width:760px}
+th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);background:var(--surface-2)}
+tbody tr{cursor:pointer}
+tbody tr:hover{background:var(--surface-2)}
+tbody tr:last-child td{border-bottom:0}
+
+/* Vorschrift */
+.sop{display:grid;grid-template-columns:240px 1fr;gap:24px;align-items:start}
+@media (max-width:860px){.sop{grid-template-columns:1fr}}
+.sop-toc{position:sticky;top:12px;display:flex;flex-direction:column;gap:2px;font-size:14px}
+@media (max-width:860px){.sop-toc{position:static}}
+.sop-toc a{color:var(--muted);text-decoration:none;padding:4px 8px;border-left:2px solid var(--line)}
+.sop-toc a:hover{color:var(--ink);border-left-color:var(--accent)}
+.sop-body{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:28px 32px;max-width:78ch}
+@media (max-width:600px){.sop-body{padding:20px 18px}}
+.sop-body h3{margin-top:28px;padding-bottom:6px;border-bottom:1px solid var(--line);font-size:22px}
+.sop-body h3:first-of-type{margin-top:8px}
+.sop-body h4{margin:16px 0 4px;font-size:15px}
+.sop-body p,.sop-body li{max-width:68ch}
+.sop-body ol,.sop-body ul{padding-left:22px}
+.sop-body table{min-width:0;font-size:14px;margin:8px 0}
+.sop-body .doc-head{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;font-family:var(--font-mono);font-size:12px;color:var(--muted);border-bottom:2px solid var(--ink);padding-bottom:10px;margin-bottom:6px}
+.note{background:var(--accent-soft);border-left:4px solid var(--accent);padding:10px 14px;border-radius:4px;margin:12px 0}
+
+/* Formulare */
+.tpl-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:14px}
+.tpl{display:flex;flex-direction:column;gap:10px}
+.tpl pre{margin:0;background:var(--surface-2);border:1px solid var(--line);border-radius:6px;padding:12px;font-family:var(--font-mono);font-size:12.5px;line-height:1.5;white-space:pre-wrap;max-height:260px;overflow:auto}
+.tpl .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.tpl .row h3{margin-right:auto}
+
+/* Dialog */
+dialog{border:1px solid var(--line);border-radius:10px;padding:0;background:var(--surface);color:var(--ink);width:min(860px,calc(100vw - 24px));max-height:calc(100vh - 32px)}
+dialog::backdrop{background:rgba(6,10,20,.6)}
+.dlg-head{display:flex;align-items:center;gap:10px;padding:16px 20px;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--surface);z-index:1}
+.dlg-head h3{font-size:24px;margin-right:auto}
+.dlg-body{padding:18px 20px;display:flex;flex-direction:column;gap:16px}
+.dlg-foot{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;padding:14px 20px;border-top:1px solid var(--line);position:sticky;bottom:0;background:var(--surface)}
+.dlg-foot .left{margin-right:auto}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px 16px}
+@media (max-width:640px){.form-grid{grid-template-columns:1fr}}
+.field{display:flex;flex-direction:column;gap:4px;min-width:0}
+.field.wide{grid-column:1/-1}
+.field label{font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.field input,.field select,.field textarea{background:var(--surface-2);border:1px solid var(--line);border-radius:6px;padding:8px 10px;width:100%}
+.field textarea{resize:vertical;min-height:70px}
+.field textarea.big{min-height:280px;font-family:var(--font-mono);font-size:13px}
+.field input[disabled],.field select[disabled],.field textarea[disabled]{opacity:1;color:var(--ink);background:transparent}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{position:relative}
+.chip input{position:absolute;opacity:0;inset:0;margin:0;cursor:pointer}
+.chip span{display:inline-block;padding:5px 11px;border:1px solid var(--line);border-radius:99px;font-size:13px;background:var(--surface-2)}
+.chip input:checked+span{background:var(--accent);border-color:var(--accent);color:var(--on-accent);font-weight:600}
+.chip input:focus-visible+span{outline:2px solid var(--accent);outline-offset:2px}
+.detail-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px 20px}
+.detail-grid div small{display:block;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--muted)}
+.detail-grid div p{margin:2px 0 0;white-space:pre-wrap;overflow-wrap:anywhere}
+.detail-grid .wide{grid-column:1/-1}
+.report-text{white-space:pre-wrap;font-family:var(--font-mono);font-size:13px;background:var(--surface-2);border:1px solid var(--line);border-radius:6px;padding:14px;overflow-wrap:anywhere}
+.sub-h{display:flex;align-items:center;gap:8px}
+.sub-h h4{margin:0;font-family:var(--font-display);font-size:18px;text-transform:uppercase;letter-spacing:.04em;margin-right:auto}
+
+.toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:8px;font-size:14px;z-index:50;max-width:calc(100vw - 32px);display:none}
+.toast.show{display:block}
+.banner{padding:10px 14px;border-radius:6px;background:var(--accent-soft);border-left:4px solid var(--accent);font-size:14px}
+.banner[hidden]{display:none}
+.who{display:inline-flex;align-items:center;gap:8px;font-size:12px;color:#cfd6e4}
+.who[hidden]{display:none}
+.gate{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:16px;z-index:40;overflow:auto}
+.gate[hidden]{display:none}
+.gate-card{background:var(--surface);border:1px solid var(--line);border-top:4px solid var(--accent);border-radius:10px;padding:28px;width:min(420px,100%);display:flex;flex-direction:column;gap:14px}
+.gate-card[hidden]{display:none}
+.gate-card h2{font-size:28px}
+.gate-card p{margin:0}
+.lg-msg{color:var(--t4);font-size:14px;min-height:1em}
+@media (prefers-reduced-motion: reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="top-inner">
+    <div class="brand">
+      <svg width="46" height="52" viewBox="0 0 46 52" aria-hidden="true">
+        <path d="M23 2 L42 9 V25 C42 38 33 46 23 50 C13 46 4 38 4 25 V9 Z" fill="none" stroke="#e2a73c" stroke-width="2.5"/>
+        <path d="M23 8 L37 13.5 V25 C37 35 30 41 23 44 C16 41 9 35 9 25 V13.5 Z" fill="#e2a73c" opacity=".16"/>
+        <text x="23" y="31" text-anchor="middle" font-family="Barlow Condensed, Arial Narrow, sans-serif" font-weight="700" font-size="15" fill="#f3d79c" letter-spacing="1">CTF</text>
+      </svg>
+      <div class="brand-text">
+        <span class="dept" id="deptName">Los Santos Police Department</span>
+        <h1>Crime Task Force</h1>
+      </div>
+      <div class="brand-right">
+        <span class="sync" id="sync" data-state="wait"><i></i><span>Verbinde …</span></span>
+        <span class="who" id="who" hidden><span id="whoMail"></span><button class="btn sm ghost" id="btnLogout" style="color:#dfe5f0;border-color:rgba(255,255,255,.25)">Abmelden</button></span>
+        <button class="btn sm ghost" id="btnSettings" style="color:#dfe5f0;border-color:rgba(255,255,255,.25)">Einstellungen</button>
+      </div>
+    </div>
+    <nav class="tabs" aria-label="Bereiche">
+      <a href="#lage" data-view="lage">Lagebild</a>
+      <a href="#akten" data-view="akten">Organisationen</a>
+      <a href="#personen" data-view="personen">Personen</a>
+      <a href="#berichte" data-view="berichte">Berichte</a>
+      <a href="#vorschrift" data-view="vorschrift">Dienstvorschrift</a>
+      <a href="#formulare" data-view="formulare">Formulare</a>
+    </nav>
+  </div>
+</header>
+
+<div class="gate" id="gate" hidden>
+  <div class="gate-card" id="gateLoading" hidden><h2>CTF-Portal</h2><p class="muted">Verbinde mit der Datenbank …</p></div>
+  <form class="gate-card" id="gateLogin" hidden novalidate>
+    <h2>CTF-Portal</h2>
+    <p class="muted">Nur für Mitglieder der Crime Task Force. Melde dich mit den Zugangsdaten an, die du von der CTF-Leitung bekommen hast.</p>
+    <div class="field"><label for="lg-mail">E-Mail</label><input id="lg-mail" type="email" autocomplete="username" required></div>
+    <div class="field"><label for="lg-pw">Passwort</label><input id="lg-pw" type="password" autocomplete="current-password" required></div>
+    <p class="lg-msg" id="lg-msg" role="alert"></p>
+    <button class="btn primary" type="submit" id="lg-btn">Anmelden</button>
+    <button class="btn ghost sm" type="button" id="lg-reset">Passwort vergessen?</button>
+  </form>
+  <div class="gate-card" id="gateDenied" hidden>
+    <h2>Kein Zugriff</h2>
+    <p>Das Konto <strong id="deniedMail"></strong> ist nicht als CTF-Mitglied freigeschaltet.</p>
+    <p class="muted">Bitte wende dich an die CTF-Leitung. Sie muss dich in der Mitgliederliste eintragen.</p>
+    <button class="btn" type="button" id="deniedLogout">Abmelden</button>
+  </div>
+</div>
+
+<main>
+  <div class="banner" id="banner" hidden></div>
+
+  <!-- LAGEBILD -->
+  <section class="view" id="view-lage">
+    <div class="view-head">
+      <div><h2>Lagebild</h2><p>Aktueller Stand aller erfassten kriminellen Strukturen. Klicke auf einen Eintrag, um die Akte zu öffnen.</p></div>
+      <div class="actions write-only">
+        <button class="btn" data-new="persons">+ Person</button>
+        <button class="btn" data-new="reports">+ Bericht</button>
+        <button class="btn primary" data-new="orgs">+ Organisation anlegen</button>
+      </div>
+    </div>
+    <div class="grid-tiles" id="tiles"></div>
+    <div class="two-col">
+      <div class="card">
+        <div class="sub-h"><h4>Gefährdungslage nach Organisation</h4></div>
+        <div class="list" id="threatList"></div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:16px">
+        <div class="card">
+          <div class="sub-h"><h4>Zur Fahndung ausgeschrieben</h4></div>
+          <div class="list" id="wantedList"></div>
+        </div>
+        <div class="card">
+          <div class="sub-h"><h4>Neueste Berichte</h4></div>
+          <div class="list" id="recentReports"></div>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="sub-h"><h4>Datensicherung</h4></div>
+      <p class="muted" style="margin:6px 0 12px">Exportiere alle Akten als JSON-Text (z. B. zum Ablegen im Discord) oder spiele eine Sicherung wieder ein.</p>
+      <div class="toolbar">
+        <button class="btn" id="btnExport">Alle Daten kopieren (JSON)</button>
+        <label class="btn write-only" for="importFile">Sicherung importieren …</label>
+        <input type="file" id="importFile" accept="application/json,.json,.txt" hidden>
+      </div>
+    </div>
+  </section>
+
+  <!-- ORGANISATIONEN -->
+  <section class="view" id="view-akten">
+    <div class="view-head">
+      <div><h2>Organisationsakten</h2><p>Gangs, Mafia-Familien, Kartelle, Motorradclubs und sonstige Gruppierungen. Jede Akte bündelt Mitglieder und Berichte.</p></div>
+      <div class="actions write-only"><button class="btn primary" data-new="orgs">+ Organisation anlegen</button></div>
+    </div>
+    <div class="toolbar">
+      <input type="search" id="orgSearch" placeholder="Suchen: Name, Revier, Anführer, Notizen …" aria-label="Organisationen durchsuchen">
+      <select id="orgType" aria-label="Nach Art filtern"></select>
+      <select id="orgStatus" aria-label="Nach Status filtern"></select>
+      <select id="orgSort" aria-label="Sortierung">
+        <option value="threat">Sortierung: Gefährdung</option>
+        <option value="name">Sortierung: Name</option>
+        <option value="updated">Sortierung: Zuletzt geändert</option>
+      </select>
+    </div>
+    <div class="org-grid" id="orgGrid"></div>
+  </section>
+
+  <!-- PERSONEN -->
+  <section class="view" id="view-personen">
+    <div class="view-head">
+      <div><h2>Personenregister</h2><p>Bekannte Mitglieder und Umfeld krimineller Strukturen, mit Rolle, Status und Merkmalen.</p></div>
+      <div class="actions write-only"><button class="btn primary" data-new="persons">+ Person erfassen</button></div>
+    </div>
+    <div class="toolbar">
+      <input type="search" id="perSearch" placeholder="Suchen: Name, Alias, Kennzeichen, Telefon …" aria-label="Personen durchsuchen">
+      <select id="perOrg" aria-label="Nach Organisation filtern"></select>
+      <select id="perStatus" aria-label="Nach Status filtern"></select>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Name / Alias</th><th>Organisation</th><th>Rolle</th><th>Status</th><th>Gefährlichkeit</th><th>Kennzeichen / Tel.</th><th>Geändert</th></tr></thead>
+        <tbody id="perBody"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- BERICHTE -->
+  <section class="view" id="view-berichte">
+    <div class="view-head">
+      <div><h2>Berichte &amp; Anträge</h2><p>Observationsberichte, Einsatzberichte, Hinweise, Operationsanträge und Anträge auf Durchsuchungsbeschluss.</p></div>
+      <div class="actions write-only"><button class="btn primary" data-new="reports">+ Bericht schreiben</button></div>
+    </div>
+    <div class="toolbar">
+      <input type="search" id="repSearch" placeholder="Suchen: Titel, Inhalt, Beamte …" aria-label="Berichte durchsuchen">
+      <select id="repType" aria-label="Nach Berichtsart filtern"></select>
+      <select id="repOrg" aria-label="Nach Organisation filtern"></select>
+    </div>
+    <div class="card" style="padding:6px 16px"><div class="list" id="repList"></div></div>
+  </section>
+
+  <!-- DIENSTVORSCHRIFT -->
+  <section class="view" id="view-vorschrift">
+    <div class="view-head">
+      <div><h2>Dienstvorschrift CTF</h2><p>Standard Operating Procedure der Crime Task Force. Gilt für alle Mitglieder der Einheit.</p></div>
+    </div>
+    <div class="sop">
+      <nav class="sop-toc" aria-label="Inhaltsverzeichnis">
+        <a href="#vorschrift" data-jump="s1">§ 1 Auftrag &amp; Zuständigkeit</a>
+        <a href="#vorschrift" data-jump="s2">§ 2 Organisation &amp; Ränge</a>
+        <a href="#vorschrift" data-jump="s3">§ 3 Aufnahme &amp; Ausbildung</a>
+        <a href="#vorschrift" data-jump="s4">§ 4 Dienstbetrieb</a>
+        <a href="#vorschrift" data-jump="s5">§ 5 Ermittlungen &amp; Aktenführung</a>
+        <a href="#vorschrift" data-jump="s6">§ 6 Observation &amp; verdeckte Maßnahmen</a>
+        <a href="#vorschrift" data-jump="s7">§ 7 Zugriffe &amp; Razzien</a>
+        <a href="#vorschrift" data-jump="s8">§ 8 Vertrauenspersonen</a>
+        <a href="#vorschrift" data-jump="s9">§ 9 Beweismittel</a>
+        <a href="#vorschrift" data-jump="s10">§ 10 Geheimhaltung</a>
+        <a href="#vorschrift" data-jump="s11">§ 11 Roleplay-Grundsätze</a>
+        <a href="#vorschrift" data-jump="s12">§ 12 Disziplinarmaßnahmen</a>
+      </nav>
+      <article class="sop-body">
+        <div class="doc-head"><span>DV-CTF 01 · Dienstvorschrift Crime Task Force</span><span>Einstufung: INTERN</span></div>
+
+        <h3 id="s1">§ 1 Auftrag und Zuständigkeit</h3>
+        <p>Die Crime Task Force (CTF) ist eine Spezialeinheit des Police Departments. Sie bekämpft organisierte und bandenmäßige Kriminalität. Dazu gehören Straßengangs, Mafia-Strukturen, Kartelle, kriminelle Motorradclubs und andere Gruppierungen, die dauerhaft und arbeitsteilig Straftaten begehen.</p>
+        <h4>Aufgaben</h4>
+        <ul>
+          <li>Aufbau und Pflege eines Lagebilds über alle kriminellen Strukturen der Stadt</li>
+          <li>Aufklärung von Hierarchien, Revieren, Geldflüssen und Bündnissen</li>
+          <li>Langfristige Ermittlungen gegen Führungspersonen, nicht nur gegen Einzeltäter</li>
+          <li>Planung und Durchführung von Zugriffen, Razzien und Durchsuchungen</li>
+          <li>Beratung und Unterstützung des Streifendienstes bei Bandenkriminalität</li>
+        </ul>
+        <p>Der Streifendienst bleibt für Notrufe und Alltagseinsätze zuständig. Die CTF übernimmt Fälle, sobald ein Bezug zu einer erfassten Organisation besteht oder die Leitung den Fall an sich zieht.</p>
+
+        <h3 id="s2">§ 2 Organisation und Rangstruktur</h3>
+        <table>
+          <thead><tr><th>Funktion</th><th>Aufgaben</th></tr></thead>
+          <tbody>
+            <tr><td><strong>Leiter CTF</strong><br><span class="muted">ab Lieutenant</span></td><td>Gesamtverantwortung, genehmigt Operationen, Observationen und V-Personen, vertritt die CTF gegenüber der Department-Leitung und der Justiz</td></tr>
+            <tr><td><strong>Stellv. Leiter</strong><br><span class="muted">ab Sergeant</span></td><td>Vertretung des Leiters, Ausbildung, Qualitätskontrolle der Akten</td></tr>
+            <tr><td><strong>Senior Ermittler</strong></td><td>Führt eigene Ermittlungskomplexe, leitet Einsätze vor Ort, betreut Anwärter</td></tr>
+            <tr><td><strong>Ermittler</strong></td><td>Ermittlungen, Observationen, Aktenpflege, Teilnahme an Zugriffen</td></tr>
+            <tr><td><strong>Anwärter</strong></td><td>Probezeit, nur in Begleitung eines Ermittlers, kein Zugriff auf Akten der Stufe „Streng vertraulich“</td></tr>
+          </tbody>
+        </table>
+        <p>Die Personalstärke der CTF wird von der Department-Leitung festgelegt. Empfohlen sind höchstens 8 bis 10 aktive Mitglieder, damit die Einheit exklusiv und handlungsfähig bleibt.</p>
+
+        <h3 id="s3">§ 3 Aufnahme und Ausbildung</h3>
+        <h4>Voraussetzungen</h4>
+        <ul>
+          <li>Mindestens Rang Officer II (oder gleichwertig) und 3 Wochen aktiver Dienst</li>
+          <li>Keine laufenden Disziplinarverfahren, keine Abmahnung in den letzten 30 Tagen</li>
+          <li>Sicheres Beherrschen von Strafgesetzbuch, Festnahme- und Durchsuchungsrecht</li>
+          <li>Schriftliche Bewerbung (Formular „Bewerbung CTF“) und Auswahlgespräch</li>
+        </ul>
+        <h4>Ausbildung (Probezeit 14 Tage)</h4>
+        <ol>
+          <li>Einweisung in diese Dienstvorschrift und das Aktensystem</li>
+          <li>Observation und Verfolgung in Zivil</li>
+          <li>Vernehmung und Befragungstechnik</li>
+          <li>Operationsplanung, Briefing und Nachbesprechung</li>
+          <li>Teilnahme an mindestens zwei Einsätzen unter Aufsicht</li>
+        </ol>
+        <p>Der Abschluss wird im Formular „Ausbildungsnachweis“ dokumentiert und vom Leiter oder Stellvertreter bestätigt.</p>
+
+        <h3 id="s4">§ 4 Dienstbetrieb</h3>
+        <ul>
+          <li><strong>Rufzeichen:</strong> „CTF-“ plus zweistellige Nummer (z. B. CTF-11 für den Leiter, CTF-12 für den Stellvertreter, ab CTF-20 Ermittler).</li>
+          <li><strong>Funk:</strong> Die CTF nutzt einen eigenen Kanal. Der allgemeine Kanal wird mitgehört. Ermittlungsdetails werden nie über den allgemeinen Kanal gesprochen.</li>
+          <li><strong>Fahrzeuge:</strong> Zivilfahrzeuge aus dem CTF-Fuhrpark. Höchstens 3 Zivilfahrzeuge gleichzeitig im Einsatz.</li>
+          <li><strong>Kleidung:</strong> Zivil mit verdeckt getragener Marke und Dienstwaffe. Bei Zugriffen ist eine Weste mit Aufschrift „POLICE“ Pflicht.</li>
+          <li><strong>Dienstbeginn:</strong> Anmeldung im Einsatzleitsystem bzw. im Dienst-Channel mit Rufzeichen und Auftrag.</li>
+        </ul>
+
+        <h3 id="s5">§ 5 Ermittlungen und Aktenführung</h3>
+        <p>Für jede kriminelle Struktur wird eine Organisationsakte geführt. Das Aktenzeichen hat das Format <span class="mono">CTF-JJJJ-XXXX</span> und wird beim Anlegen automatisch vergeben.</p>
+        <h4>Pflichtangaben einer Akte</h4>
+        <ul>
+          <li>Name, Art, Status und Gefährdungsstufe</li>
+          <li>Revier, Treffpunkte und Erkennungsmerkmale</li>
+          <li>Bekannte Führungspersonen und Mitglieder (im Personenregister verknüpft)</li>
+          <li>Bewertung, wie gesichert die Informationen sind</li>
+        </ul>
+        <h4>Gefährdungsstufen</h4>
+        <table>
+          <tbody>
+            <tr><td><span class="pill t1">Stufe 1 · Niedrig</span></td><td>Kleine Gruppe, keine Schusswaffen bekannt, überwiegend Kleinkriminalität</td></tr>
+            <tr><td><span class="pill t2">Stufe 2 · Mittel</span></td><td>Gefestigte Struktur, Drogenhandel oder Raub, vereinzelt bewaffnet</td></tr>
+            <tr><td><span class="pill t3">Stufe 3 · Hoch</span></td><td>Bewaffnet, Gewalt gegen Rivalen, Waffen- oder Großhandel</td></tr>
+            <tr><td><span class="pill t4">Stufe 4 · Kritisch</span></td><td>Schwere Gewalt, Angriffe auf Beamte, Korruption, Kontrolle über Teile der Stadt. Zugriffe nur mit SWAT/SRT.</td></tr>
+          </tbody>
+        </table>
+        <h4>Informationsbewertung</h4>
+        <p>Jede Angabe wird danach bewertet, wie sicher sie ist: <strong>Bestätigt</strong> (selbst beobachtet oder bewiesen), <strong>Wahrscheinlich</strong> (mehrere unabhängige Hinweise), <strong>Möglich</strong> (eine Quelle, ungeprüft) oder <strong>Zweifelhaft</strong>. Gerüchte werden als solche gekennzeichnet und nie als Tatsache in eine Akte geschrieben.</p>
+        <div class="note">Nach jedem relevanten Kontakt mit einer Organisation (Festnahme, Schusswechsel, Hinweis) wird die Akte innerhalb von 24 Stunden aktualisiert und ein Bericht verknüpft.</div>
+
+        <h3 id="s6">§ 6 Observation und verdeckte Maßnahmen</h3>
+        <ul>
+          <li>Observationen von mehr als 30 Minuten oder gegen Führungspersonen werden vom Leiter oder Stellvertreter genehmigt.</li>
+          <li>Observiert wird mit mindestens zwei Beamten. Ein Beamter hält Funkkontakt zur Leitung.</li>
+          <li>Wird die Observation erkannt, wird sie abgebrochen. Eigensicherung geht vor.</li>
+          <li>Zu jeder Observation wird ein Observationsbericht geschrieben.</li>
+          <li>Abhören, Ortung (Tracker) und verdeckte Ermittler im Milieu sind nur mit richterlichem Beschluss erlaubt, sofern der Server dies vorsieht.</li>
+        </ul>
+
+        <h3 id="s7">§ 7 Zugriffe, Razzien und Durchsuchungen</h3>
+        <ol>
+          <li><strong>Operationsantrag</strong> an die CTF-Leitung (Formular „Operationsantrag“).</li>
+          <li><strong>Durchsuchungsbeschluss</strong> beim zuständigen Richter bzw. DOJ beantragen, außer bei Gefahr im Verzug.</li>
+          <li><strong>Briefing</strong> aller Beteiligten: Ziel, Lageplan, Aufgabenverteilung, Funk, Rückzug, medizinische Versorgung.</li>
+          <li>Ab Gefährdungsstufe 3 wird SWAT/SRT angefordert. Bei Stufe 4 ist das Pflicht.</li>
+          <li><strong>Nachbesprechung</strong> und Einsatzbericht innerhalb von 24 Stunden.</li>
+        </ol>
+
+        <h3 id="s8">§ 8 Vertrauenspersonen (V-Personen)</h3>
+        <ul>
+          <li>Jede V-Person wird mit einem Decknamen registriert (Formular „V-Person-Registrierung“).</li>
+          <li>Den Klarnamen kennen nur der Leiter und der zuständige Führungsbeamte. Er steht in keiner Akte dieses Portals.</li>
+          <li>Zusagen wie Straffreiheit oder Strafmilderung gibt nur die Staatsanwaltschaft bzw. das DOJ.</li>
+          <li>Hinweise von V-Personen werden höchstens als „Wahrscheinlich“ bewertet, bis sie bestätigt sind.</li>
+        </ul>
+
+        <h3 id="s9">§ 9 Beweismittel und Asservate</h3>
+        <ul>
+          <li>Sichergestellte Gegenstände werden fotografiert, mit Fundort und Uhrzeit protokolliert und in die Asservatenkammer gebracht.</li>
+          <li>Jede Übergabe wird dokumentiert (Beweismittelkette).</li>
+          <li>Drogen, Waffen und Bargeld werden nie privat verwahrt. Verstöße führen zum Ausschluss aus der CTF.</li>
+        </ul>
+
+        <h3 id="s10">§ 10 Geheimhaltung und Weitergabe</h3>
+        <table>
+          <tbody>
+            <tr><td><span class="pill">Intern</span></td><td>Darf an alle Beamten des Departments weitergegeben werden</td></tr>
+            <tr><td><span class="pill acc">Vertraulich</span></td><td>Nur CTF und Department-Leitung</td></tr>
+            <tr><td><span class="pill t4">Streng vertraulich</span></td><td>Nur Leiter, Stellvertreter und zuständige Ermittler</td></tr>
+          </tbody>
+        </table>
+        <p>Informationen werden nur weitergegeben, wenn der Empfänger sie für seine Arbeit braucht. Wer Ermittlungsinformationen an Unbefugte weitergibt, wird sofort aus der CTF ausgeschlossen.</p>
+
+        <h3 id="s11">§ 11 Roleplay-Grundsätze (OOC)</h3>
+        <ul>
+          <li><strong>Kein Metagaming:</strong> In Akten steht nur, was im Roleplay erfahren wurde. Wissen aus Discord, Streams oder Clips ist tabu.</li>
+          <li><strong>Kein Powergaming:</strong> Zugriffe müssen der Gegenseite eine faire Reaktion ermöglichen.</li>
+          <li><strong>Story vor Statistik:</strong> Die CTF soll Geschichten für beide Seiten erzeugen. Eine Organisation wird über Wochen ermittelt und nicht nach dem ersten Hinweis zerschlagen.</li>
+          <li><strong>Absprache:</strong> Große Razzien oder das Zerschlagen einer Fraktion werden vorab mit der Projekt- bzw. Fraktionsleitung abgesprochen.</li>
+          <li><strong>Fairness:</strong> CTF-Mitglieder pflegen keine OOC-Absprachen mit kriminellen Fraktionen, die das RP beeinflussen.</li>
+        </ul>
+
+        <h3 id="s12">§ 12 Disziplinarmaßnahmen</h3>
+        <ol>
+          <li>Mündliche Ermahnung durch die CTF-Leitung</li>
+          <li>Schriftliche Verwarnung mit Vermerk in der Personalakte</li>
+          <li>Suspendierung von der CTF für bis zu 14 Tage</li>
+          <li>Ausschluss aus der CTF</li>
+        </ol>
+        <p>Bei Geheimnisverrat, Korruption oder Unterschlagung von Asservaten erfolgt der Ausschluss sofort. Weitere Schritte durch Internal Affairs bleiben vorbehalten.</p>
+      </article>
+    </div>
+  </section>
+
+  <!-- FORMULARE -->
+  <section class="view" id="view-formulare">
+    <div class="view-head">
+      <div><h2>Formularvorlagen</h2><p>Zum Kopieren in Discord, Google Docs oder ins Ingame-Tablet. Berichte kannst du auch direkt im Reiter „Berichte“ mit der passenden Vorlage anlegen.</p></div>
+    </div>
+    <div class="tpl-grid" id="tplGrid"></div>
+  </section>
+</main>
+
+<dialog id="dlg" aria-labelledby="dlgTitle"></dialog>
+<dialog id="confirmDlg" aria-labelledby="confirmTitle" style="width:min(440px,calc(100vw - 24px))">
+  <div class="dlg-head"><h3 id="confirmTitle">Wirklich löschen?</h3></div>
+  <div class="dlg-body"><p id="confirmText" style="margin:0"></p></div>
+  <div class="dlg-foot">
+    <button class="btn" id="confirmNo" type="button">Abbrechen</button>
+    <button class="btn primary" id="confirmYes" type="button" style="background:var(--t4);border-color:var(--t4);color:#fff">Endgültig löschen</button>
+  </div>
+</dialog>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+"use strict";
+/* =====================================================================
+   FIREBASE-KONFIGURATION
+   Firebase-Konsole → Projekteinstellungen → Allgemein → „Meine Apps“ →
+   Web-App → „SDK-Einrichtung und -Konfiguration“ → „Konfiguration“.
+   Die Werte hier eintragen. Diese Angaben sind nicht geheim; geschützt
+   werden die Daten durch Login und Firestore-Regeln.
+   ===================================================================== */
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyA3G_99SHVsZ4U_-3TkOjFBAaLMMpmc6v0",
+  authDomain: "ctf-portal-35254.firebaseapp.com",
+  projectId: "ctf-portal-35254",
+  storageBucket: "ctf-portal-35254.firebasestorage.app",
+  messagingSenderId: "45109371347",
+  appId: "1:45109371347:web:313dd66eedb4c9bf704f26"
+};
+const FIREBASE_SDK = "https://www.gstatic.com/firebasejs/10.12.2/";
+const ROLE_LABEL = {leitung:"Leitung",ermittler:"Ermittler",lesen:"Nur lesen"};
+/* ---------- Stammdaten ---------- */
+const THREAT = {1:"Niedrig",2:"Mittel",3:"Hoch",4:"Kritisch"};
+const ORG_TYPES = ["Straßengang","Mafia / Familie","Kartell","Motorradclub","Organisierte Bande","Sonstige"];
+const ORG_STATUS = ["Aktiv","Unter Beobachtung","Im Aufbau","Inaktiv","Zerschlagen"];
+const ACTIVITIES = ["Drogenhandel","Waffenhandel","Geldwäsche","Raub / Überfälle","Schutzgeld / Erpressung","Fahrzeugdiebstahl","Glücksspiel","Schmuggel","Entführung","Gewaltdelikte","Korruption","Hehlerei"];
+const SOURCE = ["Bestätigt","Wahrscheinlich","Möglich / ungeprüft","Zweifelhaft"];
+const ROLES = ["Anführer / Boss","Stellvertreter","Führungsebene (Capo / Lieutenant)","Mitglied","Anwärter / Prospect","Unterstützer / Umfeld","Unklar"];
+const P_STATUS = ["Frei","Gesucht","In Haft","Verstorben","Unbekannt"];
+const DANGER = ["Niedrig","Mittel","Hoch","Bewaffnet & gefährlich"];
+const R_TYPES = ["Observationsbericht","Einsatzbericht","Hinweis / Intel","Operationsantrag","Antrag Durchsuchungsbeschluss","Vernehmungsprotokoll","Sonstiges"];
+const CLASSIF = ["Intern","Vertraulich","Streng vertraulich"];
+
+/* ---------- Formularvorlagen ---------- */
+const TEMPLATES = [
+ {id:"bewerbung",title:"Bewerbung CTF",desc:"Für Beamte, die in die Einheit wollen.",body:
+`BEWERBUNG – CRIME TASK FORCE (CTF)
+
+Name (RP):
+Dienstnummer:
+Aktueller Rang:
+Im Dienst seit:
+Telefonnummer (IC):
+
+Bisherige Abteilungen / Zusatzausbildungen:
+
+Warum möchtest du zur CTF? (mind. 5 Sätze)
+
+Welche Erfahrung hast du mit Ermittlungen, Observationen oder Gang-RP?
+
+Fallfrage: Ein Kollege aus dem Streifendienst fragt dich nach Details
+einer laufenden Ermittlung. Wie reagierst du?
+
+Verfügbarkeit (Tage / Uhrzeiten):
+
+[ ] Ich habe die Dienstvorschrift DV-CTF 01 gelesen und verpflichte
+    mich zur Verschwiegenheit.
+
+Datum / Unterschrift:`},
+ {id:"op",title:"Operationsantrag",desc:"Vor jedem geplanten Zugriff oder jeder Razzia.",body:
+`OPERATIONSANTRAG – CTF
+Aktenzeichen Organisation: CTF-____-____
+Antragsteller (Rufzeichen):
+Datum:
+
+1. ZIEL DER OPERATION
+   Zielperson(en) / Objekt:
+   Was soll erreicht werden? (Festnahme, Durchsuchung, Sicherstellung)
+
+2. LAGE
+   Organisation / Gefährdungsstufe:
+   Erwartete Personen vor Ort:
+   Erwartete Bewaffnung:
+   Erkenntnisse aus Observation / Hinweisen:
+
+3. KRÄFTE
+   CTF-Beamte (Anzahl / Namen):
+   Unterstützung: [ ] Streife  [ ] SWAT/SRT  [ ] Air  [ ] EMS bereit
+
+4. ABLAUF
+   Treffpunkt / Uhrzeit Briefing:
+   Zugriffszeitpunkt:
+   Positionen / Aufgaben:
+   Funkkanal:
+   Rückzugsplan / Abbruchsignal:
+
+5. RECHTSGRUNDLAGE
+   [ ] Durchsuchungsbeschluss liegt vor (Nr.: ____ )
+   [ ] Haftbefehl liegt vor
+   [ ] Gefahr im Verzug (Begründung):
+
+GENEHMIGUNG CTF-Leitung:  [ ] genehmigt  [ ] abgelehnt
+Name / Datum:`},
+ {id:"obs",title:"Observationsbericht",desc:"Nach jeder Observation.",body:
+`OBSERVATIONSBERICHT – CTF
+Aktenzeichen: CTF-____-____
+Beamte (Rufzeichen):
+Datum / Zeitraum: __:__ bis __:__
+Ort / Position:
+Genehmigt durch:
+
+ZIELPERSON(EN) / OBJEKT:
+
+BEOBACHTUNGEN (chronologisch):
+__:__ –
+__:__ –
+__:__ –
+
+FESTGESTELLTE FAHRZEUGE (Modell / Farbe / Kennzeichen):
+
+KONTAKTPERSONEN:
+
+BEWERTUNG: [ ] Bestätigt  [ ] Wahrscheinlich  [ ] Möglich  [ ] Zweifelhaft
+Wurde die Observation erkannt?  [ ] Nein  [ ] Ja / Verdacht
+
+EMPFEHLUNG / NÄCHSTE SCHRITTE:`},
+ {id:"einsatz",title:"Einsatzbericht / Nachbesprechung",desc:"Nach Zugriffen, Razzien und Schusswechseln.",body:
+`EINSATZBERICHT – CTF
+Aktenzeichen: CTF-____-____
+Einsatzleiter:
+Beteiligte Beamte / Einheiten:
+Datum / Uhrzeit:
+Einsatzort:
+
+ANLASS:
+
+ABLAUF (chronologisch):
+
+FESTNAHMEN (Name / Tatvorwurf):
+
+SICHERGESTELLT (Waffen / Drogen / Bargeld / Sonstiges):
+
+VERLETZTE (Beamte / Zivilisten / Verdächtige):
+
+SCHUSSWAFFENGEBRAUCH:  [ ] Nein  [ ] Ja – Beamte:
+
+NACHBESPRECHUNG
+Was lief gut?
+Was muss verbessert werden?
+
+AUSWIRKUNG AUF DIE AKTE (neue Gefährdungsstufe, Status, Mitglieder):`},
+ {id:"intel",title:"Hinweisaufnahme / Intel",desc:"Für Tipps aus Bevölkerung, Festnahmen oder V-Personen.",body:
+`HINWEISAUFNAHME – CTF
+Aufgenommen von:
+Datum / Uhrzeit:
+Quelle: [ ] Bürger  [ ] Festgenommener  [ ] V-Person (Deckname: ____ )
+        [ ] Eigene Beobachtung  [ ] Sonstiges
+
+BETROFFENE ORGANISATION / PERSON:
+
+INHALT DES HINWEISES:
+
+BEWERTUNG: [ ] Bestätigt  [ ] Wahrscheinlich  [ ] Möglich  [ ] Zweifelhaft
+Begründung:
+
+WEITERE SCHRITTE:`},
+ {id:"dsb",title:"Antrag auf Durchsuchungsbeschluss",desc:"An Richter / DOJ.",body:
+`ANTRAG AUF ERLASS EINES DURCHSUCHUNGSBESCHLUSSES
+An: Department of Justice / zuständiger Richter
+Antragsteller (Name, Rang, Dienstnummer):
+Einheit: Crime Task Force
+Datum:
+
+1. ZU DURCHSUCHENDES OBJEKT / FAHRZEUG / PERSON
+   Adresse bzw. Beschreibung:
+   Eigentümer / Nutzer:
+
+2. TATVORWURF(E)
+
+3. GESUCHTE GEGENSTÄNDE / BEWEISMITTEL
+
+4. BEGRÜNDUNG DES TATVERDACHTS (Tatsachen, keine Vermutungen)
+   - Beobachtung vom __.__. :
+   - Hinweis vom __.__. :
+   - Bisherige Ermittlungsergebnisse:
+
+5. BEANTRAGTER ZEITRAUM DER GÜLTIGKEIT
+
+Unterschrift Antragsteller:
+
+ENTSCHEIDUNG DES GERICHTS:  [ ] erlassen  [ ] abgelehnt
+Richter / Datum / Nr.:`},
+ {id:"vp",title:"V-Person-Registrierung",desc:"Nur bei der CTF-Leitung ablegen, nie im Portal.",body:
+`V-PERSON-REGISTRIERUNG – STRENG VERTRAULICH
+Deckname:
+Führungsbeamter (Rufzeichen):
+Registriert am:
+
+Klarname: (nur auf dem Exemplar der Leitung eintragen)
+
+Zugang zu Organisation(en):
+Motivation der V-Person: [ ] Geld  [ ] Strafmilderung  [ ] Rache  [ ] Sonstiges
+
+Vereinbarungen (nur nach Rücksprache mit DOJ / Staatsanwaltschaft):
+
+Kontaktweg / Codewort:
+
+Zuverlässigkeit bisher:  [ ] neu  [ ] gut  [ ] wechselhaft  [ ] schlecht
+
+Freigabe Leiter CTF:
+Name / Datum:`},
+ {id:"ausbildung",title:"Ausbildungsnachweis",desc:"Checkliste für Anwärter in der Probezeit.",body:
+`AUSBILDUNGSNACHWEIS – CTF-ANWÄRTER
+Name / Dienstnummer:
+Beginn Probezeit:
+Betreuender Ermittler:
+
+[ ] Modul 1 – Dienstvorschrift & Aktensystem      Datum / Ausbilder:
+[ ] Modul 2 – Observation & Verfolgung in Zivil    Datum / Ausbilder:
+[ ] Modul 3 – Vernehmung & Befragung               Datum / Ausbilder:
+[ ] Modul 4 – Operationsplanung & Briefing         Datum / Ausbilder:
+[ ] Einsatz unter Aufsicht Nr. 1                   Datum / Aktenzeichen:
+[ ] Einsatz unter Aufsicht Nr. 2                   Datum / Aktenzeichen:
+
+Bewertung des Betreuers:
+
+Ergebnis:  [ ] Übernahme als Ermittler  [ ] Verlängerung  [ ] nicht bestanden
+Leiter / Stellv. CTF, Datum:`},
+ {id:"vernehmung",title:"Vernehmungsprotokoll",desc:"Für Befragungen von Beschuldigten und Zeugen.",body:
+`VERNEHMUNGSPROTOKOLL – CTF
+Aktenzeichen: CTF-____-____
+Vernommene Person:  [ ] Beschuldigter  [ ] Zeuge
+Name / Alias:
+Vernehmende Beamte:
+Datum / Uhrzeit / Ort:
+
+Belehrung über Rechte erfolgt:  [ ] Ja  um __:__
+Anwalt anwesend:  [ ] Nein  [ ] Ja – Name:
+
+AUSSAGE (sinngemäß, wichtige Stellen wörtlich):
+
+ERKENNTNISSE FÜR DIE AKTE:
+
+Bewertung der Glaubwürdigkeit:`}
+];
+const TYPE_TPL = {"Observationsbericht":"obs","Einsatzbericht":"einsatz","Hinweis / Intel":"intel","Operationsantrag":"op","Antrag Durchsuchungsbeschluss":"dsb","Vernehmungsprotokoll":"vernehmung"};
+
+/* ---------- Zustand ---------- */
+const S = { orgs:[], persons:[], reports:[], config:{}, db:null, mode:"wait", canWrite:true, loaded:new Set() };
+
+/* ---------- Helfer ---------- */
+const $ = (s,r=document)=>r.querySelector(s);
+const $$ = (s,r=document)=>Array.from(r.querySelectorAll(s));
+const esc = v => String(v ?? "").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const uid = () => (crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36)+Math.random().toString(36).slice(2));
+const code4 = () => Math.random().toString(36).slice(2,6).toUpperCase().padEnd(4,"X");
+const fmtDate = ts => ts ? new Date(ts).toLocaleDateString("de-DE",{day:"2-digit",month:"2-digit",year:"numeric"}) : "–";
+const fmtDT = ts => ts ? new Date(ts).toLocaleString("de-DE",{day:"2-digit",month:"2-digit",year:"2-digit",hour:"2-digit",minute:"2-digit"}) : "–";
+const orgById = id => S.orgs.find(o=>o.id===id);
+const orgName = id => { const o = orgById(id); return o ? o.name : ""; };
+const tNum = o => Math.min(4,Math.max(1,parseInt(o.threat)||1));
+function toast(msg){ const t=$("#toast"); t.textContent=msg; t.classList.add("show"); clearTimeout(toast._t); toast._t=setTimeout(()=>t.classList.remove("show"),3200); }
+function threatPill(n){ n=Math.min(4,Math.max(1,parseInt(n)||1)); return `<span class="pill t${n}">Stufe ${n} · ${THREAT[n]}</span>`; }
+function statusPill(s){
+  const map={"Gesucht":"t4","In Haft":"acc","Aktiv":"t3","Unter Beobachtung":"t2","Zerschlagen":"t1","Bewaffnet & gefährlich":"t4","Hoch":"t3","Mittel":"t2","Niedrig":"t1","Streng vertraulich":"t4","Vertraulich":"acc"};
+  return s ? `<span class="pill ${map[s]||""}">${esc(s)}</span>` : "";
+}
+function opts(arr, all){ return (all?`<option value="">${esc(all)}</option>`:"") + arr.map(o=>{const [v,l]=Array.isArray(o)?o:[o,o];return `<option value="${esc(v)}">${esc(l)}</option>`}).join(""); }
+function orgOptions(){ return [...S.orgs].sort((a,b)=>String(a.name).localeCompare(String(b.name),"de")).map(o=>[o.id,o.name]); }
+
+function setSync(state, text){ const el=$("#sync"); el.dataset.state=state; el.querySelector("span").textContent=text; }
+function applyWriteState(){
+  $$(".write-only").forEach(el=>el.style.display=S.canWrite?"":"none");
+  $("#btnSettings").style.display=(S.db?S.isLead:S.canWrite)?"":"none";
+  const b=$("#banner");
+  if(S.notConfigured){ b.hidden=false; b.textContent="Noch nicht mit Firebase verbunden: Trage die Firebase-Konfiguration oben im Script dieser Datei ein (siehe Anleitung). Bis dahin läuft die Seite im lokalen Modus und Änderungen gehen beim Schließen verloren."; }
+  else if(S.mode==="local"){ b.hidden=false; b.textContent="Lokaler Modus: Firebase ist gerade nicht erreichbar. Änderungen gehen beim Schließen verloren. Sichere sie über „Alle Daten kopieren“."; }
+  else if(!S.canWrite){ b.hidden=false; b.textContent="Nur Lesezugriff: Du kannst die Akten einsehen, aber nichts ändern. Für Schreibrechte wende dich an die CTF-Leitung."; }
+  else b.hidden=true;
+}
+
+/* ---------- Feldschemata ---------- */
+const FIELDS = {
+ orgs:[
+  {k:"name",l:"Name der Organisation",req:1},
+  {k:"kurz",l:"Kürzel / Straßenname"},
+  {k:"typ",l:"Art",t:"select",o:ORG_TYPES},
+  {k:"status",l:"Status",t:"select",o:ORG_STATUS},
+  {k:"threat",l:"Gefährdungsstufe",t:"select",o:[1,2,3,4].map(n=>[String(n),`Stufe ${n} – ${THREAT[n]}`])},
+  {k:"quelle",l:"Informationsbewertung",t:"select",o:SOURCE},
+  {k:"anfuehrer",l:"Anführer / Kopf"},
+  {k:"mitglieder",l:"Mitglieder (geschätzt)",t:"number"},
+  {k:"revier",l:"Revier / Gebiet"},
+  {k:"hq",l:"Hauptquartier / Treffpunkte"},
+  {k:"erkennung",l:"Farben & Erkennungsmerkmale",wide:1},
+  {k:"aktivitaeten",l:"Bekannte Aktivitäten",t:"chips",o:ACTIVITIES,wide:1},
+  {k:"fahrzeuge",l:"Fahrzeuge / Kennzeichen",t:"textarea"},
+  {k:"waffen",l:"Bewaffnung",t:"textarea"},
+  {k:"verbuendete",l:"Verbündete"},
+  {k:"rivalen",l:"Rivalen / Feinde"},
+  {k:"notizen",l:"Lagenotizen & Erkenntnisse",t:"textarea",rows:6,wide:1},
+  {k:"erfasstVon",l:"Bearbeiter (RP-Name / Dienstnr.)"}
+ ],
+ persons:[
+  {k:"name",l:"Name (soweit bekannt)",req:1},
+  {k:"alias",l:"Alias / Spitzname"},
+  {k:"orgId",l:"Organisation",t:"select",o:()=>[["","– keine / unbekannt –"],...orgOptions()]},
+  {k:"rolle",l:"Rolle",t:"select",o:ROLES},
+  {k:"status",l:"Status",t:"select",o:P_STATUS},
+  {k:"gefahr",l:"Gefährlichkeit",t:"select",o:DANGER},
+  {k:"telefon",l:"Telefonnummer (IC)"},
+  {k:"kennzeichen",l:"Fahrzeuge / Kennzeichen"},
+  {k:"merkmale",l:"Aussehen, Tattoos, Kleidung",t:"textarea",wide:1},
+  {k:"vorstrafen",l:"Vorstrafen / offene Haftbefehle",t:"textarea",wide:1},
+  {k:"notizen",l:"Notizen",t:"textarea",rows:4,wide:1},
+  {k:"erfasstVon",l:"Bearbeiter (RP-Name / Dienstnr.)"}
+ ],
+ reports:[
+  {k:"titel",l:"Titel",req:1,wide:1},
+  {k:"typ",l:"Berichtsart",t:"select",o:R_TYPES},
+  {k:"orgId",l:"Betroffene Organisation",t:"select",o:()=>[["","– keine –"],...orgOptions()]},
+  {k:"datum",l:"Datum des Geschehens",t:"date"},
+  {k:"einstufung",l:"Einstufung",t:"select",o:CLASSIF},
+  {k:"beteiligte",l:"Beteiligte Beamte",wide:1},
+  {k:"inhalt",l:"Inhalt",t:"textarea",big:1,wide:1,tplBtn:1},
+  {k:"erfasstVon",l:"Verfasser (RP-Name / Dienstnr.)"}
+ ]
+};
+const KIND_LABEL = {orgs:"Organisation",persons:"Person",reports:"Bericht"};
+
+function fieldHTML(f,val,ro){
+  const id="f-"+f.k, dis=ro?" disabled":"";
+  let input;
+  if(f.t==="textarea"){
+    input=`<textarea id="${id}" name="${f.k}" rows="${f.rows||3}"${f.big?' class="big"':""}${dis}>${esc(val)}</textarea>`;
+  } else if(f.t==="select"){
+    const list=typeof f.o==="function"?f.o():f.o;
+    input=`<select id="${id}" name="${f.k}"${dis}>`+list.map(o=>{const [v,l]=Array.isArray(o)?o:[o,o];return `<option value="${esc(v)}"${String(val??"")===String(v)?" selected":""}>${esc(l)}</option>`}).join("")+`</select>`;
+  } else if(f.t==="chips"){
+    const arr=Array.isArray(val)?val:[];
+    input=`<div class="chips" role="group" aria-labelledby="${id}-l">`+f.o.map((o,i)=>`<label class="chip"><input type="checkbox" id="${id}-${i}" name="${f.k}" value="${esc(o)}"${arr.includes(o)?" checked":""}${dis}><span>${esc(o)}</span></label>`).join("")+`</div>`;
+  } else {
+    input=`<input id="${id}" name="${f.k}" type="${f.t||"text"}" value="${esc(val)}"${f.req?" required":""}${dis}${f.t==="number"?' min="0"':""}>`;
+  }
+  const tpl=f.tplBtn&&!ro?`<div><button type="button" class="btn sm ghost" id="btnInsertTpl">Vorlage der gewählten Berichtsart einfügen</button></div>`:"";
+  return `<div class="field${f.wide?" wide":""}"><label ${f.t==="chips"?"":`for="${id}"`} id="${id}-l">${esc(f.l)}${f.req?" *":""}</label>${input}${tpl}</div>`;
+}
+
+/* ---------- Speichern / Löschen ---------- */
+async function save(kind,id,data){
+  const existing=S[kind].find(x=>x.id===id);
+  const now=Date.now();
+  const body={...existing,...data,createdAt:existing?.createdAt||now,updatedAt:now};
+  delete body.id;
+  if(S.db){
+    try{ await S.db.collection(kind).doc(id).set(body); }
+    catch(e){ handleWriteError(e); throw e; }
+  } else {
+    if(existing) Object.assign(existing,body); else S[kind].push({id,...body});
+    renderAll();
+  }
+}
+async function removeDoc(kind,id){
+  if(S.db){ try{ await S.db.collection(kind).doc(id).delete(); }catch(e){ handleWriteError(e); throw e; } }
+  else { S[kind]=S[kind].filter(x=>x.id!==id); renderAll(); }
+}
+function handleWriteError(e){
+  const c=e&&e.code;
+  if(c==="permission-denied"||c==="invalid_argument"){ toast("Speichern abgelehnt: Dafür fehlen dir die Rechte. Wende dich an die CTF-Leitung."); }
+  else if(c==="quota_exceeded") toast("Speicher voll: Bitte alte Einträge löschen.");
+  else if(c==="resource_exhausted") toast("Zu viele Änderungen in kurzer Zeit. Bitte kurz warten.");
+  else toast("Speichern fehlgeschlagen. Bitte erneut versuchen.");
+}
+function confirmDelete(text){
+  return new Promise(res=>{
+    const d=$("#confirmDlg"); $("#confirmText").textContent=text;
+    const done=v=>{ d.close(); $("#confirmYes").onclick=$("#confirmNo").onclick=null; res(v); };
+    $("#confirmYes").onclick=()=>done(true); $("#confirmNo").onclick=()=>done(false);
+    d.onclose=()=>res(false);
+    d.showModal();
+  });
+}
+
+/* ---------- Dialoge ---------- */
+const dlg=$("#dlg");
+function openForm(kind,rec,preset){
+  const ro=!S.canWrite;
+  const isNew=!rec;
+  const data=rec||{...defaults(kind),...preset};
+  const az=data.az||"";
+  dlg.innerHTML=`<form id="theForm" novalidate>
+    <div class="dlg-head"><h3 id="dlgTitle">${isNew?KIND_LABEL[kind]+" anlegen":esc(KIND_LABEL[kind]+(ro?"":" bearbeiten"))}</h3>${az?`<span class="mono muted">${esc(az)}</span>`:""}<button type="button" class="btn sm ghost" data-close>Schließen</button></div>
+    <div class="dlg-body"><div class="form-grid">${FIELDS[kind].map(f=>fieldHTML(f,data[f.k],ro)).join("")}</div>
+    ${!isNew?`<p class="muted" style="margin:0;font-size:13px">Angelegt ${fmtDT(data.createdAt)} · Zuletzt geändert ${fmtDT(data.updatedAt)}</p>`:""}</div>
+    <div class="dlg-foot">
+      ${!isNew&&!ro?`<button type="button" class="btn danger left" id="btnDel">Löschen</button>`:""}
+      <button type="button" class="btn" data-close>${ro?"Schließen":"Abbrechen"}</button>
+      ${ro?"":`<button type="submit" class="btn primary">Speichern</button>`}
+    </div></form>`;
+  const form=$("#theForm",dlg);
+  form.addEventListener("submit",async ev=>{
+    ev.preventDefault();
+    const fd=new FormData(form), out={};
+    FIELDS[kind].forEach(f=>{ out[f.k]= f.t==="chips" ? fd.getAll(f.k) : String(fd.get(f.k)??"").trim(); });
+    const req=FIELDS[kind].find(f=>f.req);
+    if(!out[req.k]){ toast(`Bitte „${req.l}“ ausfüllen.`); $("#f-"+req.k,form).focus(); return; }
+    if(isNew) out.az = kind==="orgs" ? `CTF-${new Date().getFullYear()}-${code4()}` : kind==="persons" ? `P-${code4()}` : `BR-${code4()}`;
+    const btn=form.querySelector('button[type="submit"]'); btn.disabled=true;
+    try{ await save(kind,rec?.id||uid(),out); dlg.close(); toast(`${KIND_LABEL[kind]} gespeichert.`); }
+    catch(e){ btn.disabled=false; }
+  });
+  const ins=$("#btnInsertTpl",form);
+  if(ins) ins.onclick=()=>{
+    const t=TEMPLATES.find(x=>x.id===TYPE_TPL[$("#f-typ",form).value]);
+    if(!t){ toast("Für diese Berichtsart gibt es keine Vorlage."); return; }
+    const ta=$("#f-inhalt",form); ta.value = ta.value.trim() ? ta.value+"\n\n"+t.body : t.body; ta.focus();
+  };
+  const del=$("#btnDel",form);
+  if(del) del.onclick=async()=>{
+    const name=data.name||data.titel||"diesen Eintrag";
+    if(await confirmDelete(`„${name}“ wird für alle Nutzer gelöscht. Verknüpfte Personen und Berichte bleiben erhalten.`)){
+      try{ await removeDoc(kind,rec.id); dlg.close(); toast("Gelöscht."); }catch(e){}
+    } else if(!dlg.open) dlg.showModal();
+  };
+  wireClose(); if(!dlg.open) dlg.showModal();
+  if(!ro) setTimeout(()=>{ const first=form.querySelector("input,select,textarea"); first&&first.focus(); },30);
+}
+function defaults(kind){
+  if(kind==="orgs") return {typ:ORG_TYPES[0],status:"Aktiv",threat:"2",quelle:SOURCE[1],aktivitaeten:[]};
+  if(kind==="persons") return {rolle:"Mitglied",status:"Frei",gefahr:"Mittel"};
+  return {typ:R_TYPES[0],einstufung:"Vertraulich",datum:new Date().toISOString().slice(0,10)};
+}
+function wireClose(){ $$("[data-close]",dlg).forEach(b=>b.onclick=()=>dlg.close()); }
+
+function openOrg(id){
+  const o=orgById(id); if(!o) return;
+  const n=tNum(o);
+  const mem=S.persons.filter(p=>p.orgId===id).sort((a,b)=>ROLES.indexOf(a.rolle)-ROLES.indexOf(b.rolle));
+  const reps=S.reports.filter(r=>r.orgId===id).sort((a,b)=>(b.datum||"").localeCompare(a.datum||"")||(b.updatedAt||0)-(a.updatedAt||0));
+  const cell=(l,v,w)=>`<div${w?' class="wide"':""}><small>${esc(l)}</small><p>${v?esc(v):'<span class="muted">–</span>'}</p></div>`;
+  dlg.innerHTML=`
+    <div class="dlg-head" style="border-top:6px solid var(--t${n})"><h3 id="dlgTitle">${esc(o.name)}</h3><span class="mono muted">${esc(o.az||"")}</span><button type="button" class="btn sm ghost" data-close>Schließen</button></div>
+    <div class="dlg-body">
+      <div class="toolbar">${threatPill(n)}${statusPill(o.status)}<span class="pill">${esc(o.typ||"")}</span>${o.quelle?`<span class="pill">Info: ${esc(o.quelle)}</span>`:""}${(o.aktivitaeten||[]).map(a=>`<span class="pill acc">${esc(a)}</span>`).join("")}</div>
+      <div class="detail-grid">
+        ${cell("Kürzel / Straßenname",o.kurz)}${cell("Anführer / Kopf",o.anfuehrer)}${cell("Mitglieder (geschätzt)",o.mitglieder)}
+        ${cell("Revier / Gebiet",o.revier)}${cell("Hauptquartier / Treffpunkte",o.hq)}${cell("Farben & Erkennungsmerkmale",o.erkennung)}
+        ${cell("Verbündete",o.verbuendete)}${cell("Rivalen / Feinde",o.rivalen)}${cell("Bearbeiter",o.erfasstVon)}
+        ${cell("Fahrzeuge / Kennzeichen",o.fahrzeuge)}${cell("Bewaffnung",o.waffen)}
+        ${cell("Lagenotizen & Erkenntnisse",o.notizen,1)}
+      </div>
+      <div class="sub-h"><h4>Bekannte Personen (${mem.length})</h4>${S.canWrite?`<button class="btn sm" id="addMem">+ Person</button>`:""}</div>
+      <div class="list">${mem.length?mem.map(p=>`<button class="list-item" data-person="${esc(p.id)}"><span class="dot" style="--c:${p.status==="Gesucht"?"var(--t4)":p.status==="In Haft"?"var(--accent)":"var(--muted)"}"></span><span class="grow"><strong>${esc(p.name)}${p.alias?` „${esc(p.alias)}“`:""}</strong><small>${esc(p.rolle||"")}</small></span>${statusPill(p.status)}</button>`).join(""):`<div class="empty">Noch keine Personen verknüpft.</div>`}</div>
+      <div class="sub-h"><h4>Berichte (${reps.length})</h4>${S.canWrite?`<button class="btn sm" id="addRep">+ Bericht</button>`:""}</div>
+      <div class="list">${reps.length?reps.map(repItem).join(""):`<div class="empty">Noch keine Berichte zu dieser Organisation.</div>`}</div>
+      <p class="muted" style="margin:0;font-size:13px">Angelegt ${fmtDT(o.createdAt)} · Zuletzt geändert ${fmtDT(o.updatedAt)}</p>
+    </div>
+    <div class="dlg-foot"><button class="btn" data-close>Schließen</button>${S.canWrite?`<button class="btn primary" id="editOrg">Akte bearbeiten</button>`:""}</div>`;
+  wireClose();
+  const e=$("#editOrg",dlg); if(e) e.onclick=()=>openForm("orgs",o);
+  const am=$("#addMem",dlg); if(am) am.onclick=()=>openForm("persons",null,{orgId:id});
+  const ar=$("#addRep",dlg); if(ar) ar.onclick=()=>openForm("reports",null,{orgId:id});
+  $$("[data-person]",dlg).forEach(b=>b.onclick=()=>openForm("persons",S.persons.find(p=>p.id===b.dataset.person)));
+  $$("[data-report]",dlg).forEach(b=>b.onclick=()=>openReport(b.dataset.report));
+  if(!dlg.open) dlg.showModal();
+}
+function openReport(id){
+  const r=S.reports.find(x=>x.id===id); if(!r) return;
+  dlg.innerHTML=`
+    <div class="dlg-head"><h3 id="dlgTitle">${esc(r.titel)}</h3><span class="mono muted">${esc(r.az||"")}</span><button type="button" class="btn sm ghost" data-close>Schließen</button></div>
+    <div class="dlg-body">
+      <div class="toolbar"><span class="pill">${esc(r.typ||"")}</span>${statusPill(r.einstufung)}${r.orgId?`<button class="pill acc" data-org="${esc(r.orgId)}" style="cursor:pointer">${esc(orgName(r.orgId)||"Organisation")}</button>`:""}</div>
+      <div class="detail-grid">
+        <div><small>Datum</small><p>${r.datum?esc(new Date(r.datum).toLocaleDateString("de-DE")):"–"}</p></div>
+        <div><small>Verfasser</small><p>${esc(r.erfasstVon||"–")}</p></div>
+        <div class="wide"><small>Beteiligte Beamte</small><p>${esc(r.beteiligte||"–")}</p></div>
+      </div>
+      <div class="report-text">${esc(r.inhalt||"(kein Inhalt)")}</div>
+    </div>
+    <div class="dlg-foot"><button class="btn left" id="copyRep">Text kopieren</button><button class="btn" data-close>Schließen</button>${S.canWrite?`<button class="btn primary" id="editRep">Bearbeiten</button>`:""}</div>`;
+  wireClose();
+  const e=$("#editRep",dlg); if(e) e.onclick=()=>openForm("reports",r);
+  const o=$("[data-org]",dlg); if(o) o.onclick=()=>openOrg(r.orgId);
+  $("#copyRep",dlg).onclick=()=>copyText(`${r.titel}\n${r.typ} · ${r.einstufung} · ${r.datum||""}\n\n${r.inhalt||""}`);
+  if(!dlg.open) dlg.showModal();
+}
+async function copyText(t){ try{ await navigator.clipboard.writeText(t); toast("In die Zwischenablage kopiert."); }catch(e){ toast("Kopieren nicht erlaubt. Bitte Text manuell markieren."); } }
+
+/* ---------- Rendering ---------- */
+function repItem(r){
+  const o=orgName(r.orgId);
+  return `<button class="list-item" data-report="${esc(r.id)}"><span class="dot" style="--c:${r.einstufung==="Streng vertraulich"?"var(--t4)":r.einstufung==="Vertraulich"?"var(--accent)":"var(--muted)"}"></span><span class="grow"><strong>${esc(r.titel)}</strong><small>${esc(r.typ||"")}${o?" · "+esc(o):""} · ${r.datum?esc(new Date(r.datum).toLocaleDateString("de-DE")):fmtDate(r.createdAt)}${r.erfasstVon?" · "+esc(r.erfasstVon):""}</small></span><span class="mono muted">${esc(r.az||"")}</span></button>`;
+}
+function renderLage(){
+  const loading=S.mode==="wait";
+  const active=S.orgs.filter(o=>!["Zerschlagen","Inaktiv"].includes(o.status));
+  const wanted=S.persons.filter(p=>p.status==="Gesucht");
+  const week=Date.now()-7*864e5;
+  const recent=S.reports.filter(r=>(r.datum?Date.parse(r.datum):r.createdAt)>=week);
+  const crit=active.filter(o=>tNum(o)>=3).length;
+  const tiles=[[active.length,"Aktive Organisationen"],[crit,"Davon Stufe 3–4"],[S.persons.length,"Erfasste Personen"],[wanted.length,"Zur Fahndung"],[recent.length,"Berichte (7 Tage)"]];
+  $("#tiles").innerHTML=tiles.map(([v,l])=>`<div class="tile"><b>${loading?"…":v}</b><span>${l}</span></div>`).join("");
+  const sorted=[...S.orgs].sort((a,b)=>tNum(b)-tNum(a)||String(a.name).localeCompare(String(b.name),"de"));
+  $("#threatList").innerHTML=sorted.length?sorted.map(o=>{const n=tNum(o),m=S.persons.filter(p=>p.orgId===o.id).length;return `<button class="list-item" data-org="${esc(o.id)}"><span class="dot" style="--c:var(--t${n})"></span><span class="grow"><strong>${esc(o.name)}</strong><small>${esc(o.typ||"")}${o.revier?" · "+esc(o.revier):""} · ${m} Person${m===1?"":"en"}</small></span>${statusPill(o.status)}${threatPill(n)}</button>`}).join(""):`<div class="empty">${loading?"Lade Akten …":"Noch keine Organisationen erfasst. Lege die erste Akte an."}</div>`;
+  $("#wantedList").innerHTML=wanted.length?wanted.slice(0,8).map(p=>`<button class="list-item" data-person="${esc(p.id)}"><span class="dot" style="--c:var(--t4)"></span><span class="grow"><strong>${esc(p.name)}${p.alias?` „${esc(p.alias)}“`:""}</strong><small>${esc(orgName(p.orgId)||"ohne Organisation")} · ${esc(p.rolle||"")}</small></span>${statusPill(p.gefahr)}</button>`).join(""):`<div class="empty">${loading?"…":"Niemand zur Fahndung ausgeschrieben."}</div>`;
+  const rr=[...S.reports].sort((a,b)=>(b.updatedAt||0)-(a.updatedAt||0)).slice(0,6);
+  $("#recentReports").innerHTML=rr.length?rr.map(repItem).join(""):`<div class="empty">${loading?"…":"Noch keine Berichte."}</div>`;
+}
+function renderOrgs(){
+  const q=$("#orgSearch").value.trim().toLowerCase(), ty=$("#orgType").value, st=$("#orgStatus").value, so=$("#orgSort").value;
+  let list=S.orgs.filter(o=>(!ty||o.typ===ty)&&(!st||o.status===st)&&(!q||[o.name,o.kurz,o.revier,o.anfuehrer,o.notizen,o.hq,o.erkennung,o.az,(o.aktivitaeten||[]).join(" ")].join(" ").toLowerCase().includes(q)));
+  list.sort(so==="name"?(a,b)=>String(a.name).localeCompare(String(b.name),"de"):so==="updated"?(a,b)=>(b.updatedAt||0)-(a.updatedAt||0):(a,b)=>tNum(b)-tNum(a)||String(a.name).localeCompare(String(b.name),"de"));
+  $("#orgGrid").innerHTML=list.length?list.map(o=>{const n=tNum(o),m=S.persons.filter(p=>p.orgId===o.id).length,r=S.reports.filter(x=>x.orgId===o.id).length;
+    return `<button class="org" data-org="${esc(o.id)}" style="--stripe:var(--t${n})">
+      <div class="row"><span class="mono muted">${esc(o.az||"")}</span></div>
+      <h3>${esc(o.name)}${o.kurz?` <span class="muted" style="font-size:16px">(${esc(o.kurz)})</span>`:""}</h3>
+      <div class="row">${threatPill(n)}${statusPill(o.status)}<span class="pill">${esc(o.typ||"")}</span></div>
+      <dl class="meta"><dt>Revier</dt><dd>${esc(o.revier||"–")}</dd><dt>Kopf</dt><dd>${esc(o.anfuehrer||"–")}</dd><dt>Erfasst</dt><dd>${m} Personen · ${r} Berichte</dd></dl>
+      ${(o.aktivitaeten||[]).length?`<div class="row">${o.aktivitaeten.slice(0,4).map(a=>`<span class="pill acc">${esc(a)}</span>`).join("")}${o.aktivitaeten.length>4?`<span class="pill">+${o.aktivitaeten.length-4}</span>`:""}</div>`:""}
+    </button>`}).join(""):`<div class="empty" style="grid-column:1/-1">${S.mode==="wait"?"Lade Akten …":S.orgs.length?"Keine Treffer für diese Filter.":"Noch keine Organisationen erfasst."}</div>`;
+}
+function renderPersons(){
+  const q=$("#perSearch").value.trim().toLowerCase(), og=$("#perOrg").value, st=$("#perStatus").value;
+  const list=S.persons.filter(p=>(!og||(og==="__none"?!p.orgId:p.orgId===og))&&(!st||p.status===st)&&(!q||[p.name,p.alias,p.telefon,p.kennzeichen,p.merkmale,p.notizen,p.az,orgName(p.orgId)].join(" ").toLowerCase().includes(q)))
+    .sort((a,b)=>String(a.name).localeCompare(String(b.name),"de"));
+  $("#perBody").innerHTML=list.length?list.map(p=>`<tr data-person="${esc(p.id)}" tabindex="0">
+    <td><strong>${esc(p.name)}</strong>${p.alias?`<br><span class="muted">„${esc(p.alias)}“</span>`:""}</td>
+    <td>${p.orgId?esc(orgName(p.orgId)||"(gelöscht)"):'<span class="muted">–</span>'}</td>
+    <td>${esc(p.rolle||"")}</td><td>${statusPill(p.status)}</td><td>${statusPill(p.gefahr)}</td>
+    <td class="mono">${esc(p.kennzeichen||"")}${p.telefon?`<br>${esc(p.telefon)}`:""}</td>
+    <td class="mono muted">${fmtDate(p.updatedAt)}</td></tr>`).join(""):`<tr><td colspan="7"><div class="empty">${S.mode==="wait"?"Lade …":S.persons.length?"Keine Treffer.":"Noch keine Personen erfasst."}</div></td></tr>`;
+}
+function renderReports(){
+  const q=$("#repSearch").value.trim().toLowerCase(), ty=$("#repType").value, og=$("#repOrg").value;
+  const list=S.reports.filter(r=>(!ty||r.typ===ty)&&(!og||r.orgId===og)&&(!q||[r.titel,r.inhalt,r.beteiligte,r.erfasstVon,r.az].join(" ").toLowerCase().includes(q)))
+    .sort((a,b)=>(b.datum||"").localeCompare(a.datum||"")||(b.updatedAt||0)-(a.updatedAt||0));
+  $("#repList").innerHTML=list.length?list.map(repItem).join(""):`<div class="empty" style="margin:10px 0">${S.mode==="wait"?"Lade …":S.reports.length?"Keine Treffer.":"Noch keine Berichte."}</div>`;
+}
+function refreshOrgFilters(){
+  for(const [sel,first,extra] of [["#perOrg","Alle Organisationen",[["__none","Ohne Organisation"]]],["#repOrg","Alle Organisationen",[]]]){
+    const el=$(sel), v=el.value; el.innerHTML=opts([...extra,...orgOptions()],first); el.value=v; if(el.value!==v) el.value="";
+  }
+}
+function renderAll(){
+  $("#deptName").textContent=S.config.dept||"Los Santos Police Department";
+  refreshOrgFilters(); renderLage(); renderOrgs(); renderPersons(); renderReports();
+}
+
+/* ---------- Statische Teile ---------- */
+$("#orgType").innerHTML=opts(ORG_TYPES,"Alle Arten");
+$("#orgStatus").innerHTML=opts(ORG_STATUS,"Alle Status");
+$("#perStatus").innerHTML=opts(P_STATUS,"Alle Status");
+$("#repType").innerHTML=opts(R_TYPES,"Alle Berichtsarten");
+$("#tplGrid").innerHTML=TEMPLATES.map(t=>`<div class="card tpl"><div class="row"><h3>${esc(t.title)}</h3><button class="btn sm" data-copytpl="${t.id}">Kopieren</button></div><p class="muted" style="margin:0">${esc(t.desc)}</p><pre>${esc(t.body)}</pre></div>`).join("");
+
+/* ---------- Ereignisse ---------- */
+document.addEventListener("click",e=>{
+  const n=e.target.closest("[data-new]"); if(n){ openForm(n.dataset.new); return; }
+  const o=e.target.closest("[data-org]"); if(o&&!dlg.contains(o)){ openOrg(o.dataset.org); return; }
+  const p=e.target.closest("[data-person]"); if(p&&!dlg.contains(p)){ openForm("persons",S.persons.find(x=>x.id===p.dataset.person)); return; }
+  const r=e.target.closest("[data-report]"); if(r&&!dlg.contains(r)){ openReport(r.dataset.report); return; }
+  const c=e.target.closest("[data-copytpl]"); if(c){ copyText(TEMPLATES.find(t=>t.id===c.dataset.copytpl).body); return; }
+  const j=e.target.closest("[data-jump]"); if(j){ e.preventDefault(); document.getElementById(j.dataset.jump).scrollIntoView({behavior:matchMedia("(prefers-reduced-motion: reduce)").matches?"auto":"smooth"}); }
+});
+$("#perBody").addEventListener("keydown",e=>{ if(e.key==="Enter"){ const tr=e.target.closest("[data-person]"); if(tr) tr.click(); }});
+["#orgSearch","#orgType","#orgStatus","#orgSort"].forEach(s=>$(s).addEventListener("input",renderOrgs));
+["#perSearch","#perOrg","#perStatus"].forEach(s=>$(s).addEventListener("input",renderPersons));
+["#repSearch","#repType","#repOrg"].forEach(s=>$(s).addEventListener("input",renderReports));
+
+$("#btnExport").onclick=()=>{
+  const strip=a=>a.map(x=>({...x}));
+  copyText(JSON.stringify({format:"ctf-portal-v1",exportiert:new Date().toISOString(),orgs:strip(S.orgs),persons:strip(S.persons),reports:strip(S.reports)},null,1));
+};
+$("#importFile").onchange=async e=>{
+  const f=e.target.files[0]; e.target.value=""; if(!f) return;
+  let data; try{ data=JSON.parse(await f.text()); }catch(err){ toast("Die Datei ist kein gültiges JSON."); return; }
+  if(!data||!Array.isArray(data.orgs)){ toast("Unbekanntes Format. Erwartet wird ein Export aus diesem Portal."); return; }
+  let n=0;
+  try{
+    for(const kind of ["orgs","persons","reports"]) for(const rec of (data[kind]||[])){
+      if(!rec||!rec.id) continue; const {id,...rest}=rec;
+      if(S.db) await S.db.collection(kind).doc(String(id)).set(rest); else { S[kind]=S[kind].filter(x=>x.id!==id); S[kind].push({id,...rest}); }
+      n++;
+    }
+  }catch(err){ handleWriteError(err); }
+  renderAll(); toast(`${n} Einträge importiert.`);
+};
+$("#btnSettings").onclick=()=>{
+  dlg.innerHTML=`<form id="setForm"><div class="dlg-head"><h3 id="dlgTitle">Einstellungen</h3><button type="button" class="btn sm ghost" data-close>Schließen</button></div>
+  <div class="dlg-body"><div class="form-grid"><div class="field wide"><label for="f-dept">Name des Departments (Kopfzeile)</label><input id="f-dept" name="dept" value="${esc(S.config.dept||"Los Santos Police Department")}"></div></div>
+  <p class="muted" style="margin:0;font-size:14px">Neue Beamte legst du in der Firebase-Konsole an: unter „Authentication“ das Konto, unter „Firestore“ in der Sammlung <span class="mono">members</span> ein Dokument mit der E-Mail als ID und dem Feld <span class="mono">rolle</span> (leitung, ermittler oder lesen).</p></div>
+  <div class="dlg-foot"><button type="button" class="btn" data-close>Abbrechen</button><button class="btn primary" type="submit">Speichern</button></div></form>`;
+  wireClose();
+  $("#setForm").onsubmit=async ev=>{ ev.preventDefault(); const dept=$("#f-dept").value.trim();
+    try{ if(S.db) await S.db.doc("config/main").set({dept}); else { S.config.dept=dept; renderAll(); } dlg.close(); toast("Gespeichert."); }catch(e){ handleWriteError(e); } };
+  dlg.showModal();
+};
+
+/* ---------- Routing ---------- */
+const VIEWS=["lage","akten","personen","berichte","vorschrift","formulare"];
+function route(){
+  const v=VIEWS.includes(location.hash.slice(1))?location.hash.slice(1):"lage";
+  VIEWS.forEach(x=>$("#view-"+x).classList.toggle("active",x===v));
+  $$("nav.tabs a").forEach(a=>{ if(a.dataset.view===v) a.setAttribute("aria-current","page"); else a.removeAttribute("aria-current"); });
+}
+window.addEventListener("hashchange",route);
+route(); renderAll(); applyWriteState();
+
+/* ---------- Firebase: Login & Datenbank ---------- */
+function showGate(which,email){
+  const g=$("#gate"); g.hidden=!which;
+  ["Loading","Login","Denied"].forEach(n=>$("#gate"+n).hidden=(which!==n.toLowerCase()));
+  if(which==="denied") $("#deniedMail").textContent=email||"";
+  if(which==="login") setTimeout(()=>$("#lg-mail").focus(),30);
+}
+function authError(e){
+  const c=(e&&e.code)||"";
+  if(["auth/invalid-credential","auth/wrong-password","auth/user-not-found","auth/invalid-login-credentials"].includes(c)) return "E-Mail oder Passwort ist falsch.";
+  if(c==="auth/invalid-email") return "Diese E-Mail-Adresse ist ungültig.";
+  if(c==="auth/too-many-requests") return "Zu viele Versuche. Bitte warte ein paar Minuten.";
+  if(c==="auth/network-request-failed") return "Keine Verbindung zu Firebase. Prüfe deine Internetverbindung.";
+  if(c==="auth/user-disabled") return "Dieses Konto wurde gesperrt.";
+  return "Anmeldung fehlgeschlagen ("+(c||"unbekannter Fehler")+").";
+}
+function wrapFirestore(F,fs){
+  return {
+    collection:k=>({doc:id=>({ set:b=>F.setDoc(F.doc(fs,k,id),b), delete:()=>F.deleteDoc(F.doc(fs,k,id)) })}),
+    doc:p=>({ set:b=>F.setDoc(F.doc(fs,...p.split("/")),b) })
+  };
+}
+(async function boot(){
+  if(!FIREBASE_CONFIG.apiKey||!FIREBASE_CONFIG.projectId){
+    S.notConfigured=true; S.mode="local"; setSync("local","Nicht verbunden"); renderAll(); applyWriteState(); return;
+  }
+  showGate("loading");
+  let A,AU,F;
+  try{ [A,AU,F]=await Promise.all([import(FIREBASE_SDK+"firebase-app.js"),import(FIREBASE_SDK+"firebase-auth.js"),import(FIREBASE_SDK+"firebase-firestore.js")]); }
+  catch(e){ showGate(null); S.mode="local"; setSync("local","Firebase nicht erreichbar"); renderAll(); applyWriteState(); return; }
+  const app=A.initializeApp(FIREBASE_CONFIG);
+  const auth=AU.getAuth(app), fs=F.getFirestore(app);
+  const msg=$("#lg-msg");
+  $("#gateLogin").onsubmit=async ev=>{
+    ev.preventDefault(); msg.textContent="";
+    const mail=$("#lg-mail").value.trim(), pw=$("#lg-pw").value;
+    if(!mail||!pw){ msg.textContent="Bitte E-Mail und Passwort eingeben."; return; }
+    $("#lg-btn").disabled=true;
+    try{ await AU.signInWithEmailAndPassword(auth,mail,pw); $("#lg-pw").value=""; }
+    catch(e){ msg.textContent=authError(e); }
+    $("#lg-btn").disabled=false;
+  };
+  $("#lg-reset").onclick=async()=>{
+    const mail=$("#lg-mail").value.trim();
+    if(!mail){ msg.textContent="Gib zuerst deine E-Mail-Adresse ein."; return; }
+    try{ await AU.sendPasswordResetEmail(auth,mail); msg.textContent="Falls ein Konto existiert, wurde eine E-Mail zum Zurücksetzen verschickt."; }
+    catch(e){ msg.textContent=authError(e); }
+  };
+  const logout=()=>AU.signOut(auth);
+  $("#btnLogout").onclick=logout; $("#deniedLogout").onclick=logout;
+
+  let unsubs=[], timer=null;
+  AU.onAuthStateChanged(auth, async u=>{
+    unsubs.forEach(f=>f()); unsubs=[]; clearTimeout(timer);
+    Object.assign(S,{db:null,orgs:[],persons:[],reports:[],config:{},loaded:new Set(),mode:"wait",canWrite:false,isLead:false});
+    if(dlg.open) dlg.close();
+    if(!u){ $("#who").hidden=true; setSync("wait","Abgemeldet"); renderAll(); showGate("login"); return; }
+    showGate("loading");
+    const email=(u.email||"").toLowerCase();
+    let m=null; try{ m=await F.getDoc(F.doc(fs,"members",email)); }catch(e){ m=null; }
+    if(!m||!m.exists()){ showGate("denied",email); return; }
+    const rolle=String(m.data().rolle||"lesen").toLowerCase();
+    S.canWrite=rolle==="leitung"||rolle==="ermittler"; S.isLead=rolle==="leitung";
+    S.db=wrapFirestore(F,fs);
+    $("#whoMail").textContent=email+" · "+(ROLE_LABEL[rolle]||rolle);
+    $("#who").hidden=false; showGate(null);
+    timer=setTimeout(()=>{ if(S.mode!=="live"){ setSync("warn","Datenbank antwortet nicht"); toast("Die Datenbank antwortet gerade nicht. Angezeigte Daten sind evtl. nicht aktuell."); if(S.mode==="wait"){ S.mode="stale"; renderAll(); } } },10000);
+    const ready=key=>{ S.loaded.add(key); if(S.loaded.size>=4&&S.mode!=="live"){ clearTimeout(timer); S.mode="live"; setSync("live","Live · geteilte Akten"); } };
+    const onErr=err=>{ clearTimeout(timer); setSync("warn",err&&err.code==="permission-denied"?"Keine Leserechte":"Verbindung unterbrochen"); };
+    for(const kind of ["orgs","persons","reports"]){
+      unsubs.push(F.onSnapshot(F.collection(fs,kind),snap=>{ S[kind]=snap.docs.map(d=>({id:d.id,...d.data()})); ready(kind); renderAll(); },onErr));
+    }
+    unsubs.push(F.onSnapshot(F.doc(fs,"config","main"),s=>{ S.config=s.exists()?s.data():{}; ready("config"); renderAll(); },()=>ready("config")));
+    renderAll(); applyWriteState();
+  });
+})();
+</script>
+</body>
+</html>
